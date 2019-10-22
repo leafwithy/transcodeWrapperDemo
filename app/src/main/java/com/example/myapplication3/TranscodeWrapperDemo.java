@@ -23,8 +23,6 @@ public class TranscodeWrapperDemo {
 
     private MediaMuxer muxer;
 
-    private MediaFormat videoFormat;
-    private MediaFormat audioFormat;
     private String filePath = null;
     private AssetFileDescriptor srcFilePath = null;
     private int isMuxed = 0;
@@ -163,14 +161,14 @@ public class TranscodeWrapperDemo {
 
         }
 
-        videoFormat = MediaFormat.createVideoFormat(videoFormatType,width,height);
+        MediaFormat videoFormat = MediaFormat.createVideoFormat(videoFormatType, width, height);
 
         videoFormat.setInteger(MediaFormat.KEY_FRAME_RATE, frameRate);
         videoFormat.setInteger(MediaFormat.KEY_BIT_RATE,bitRate);
         videoFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible);
-        videoFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL,iFrameInteval);
+        videoFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL,frameRate * 2);
 
-        audioFormat = MediaFormat.createAudioFormat(audioFormatType,sampleRate,channelCount);
+        MediaFormat audioFormat = MediaFormat.createAudioFormat(audioFormatType, sampleRate, channelCount);
         audioFormat.setInteger(MediaFormat.KEY_BIT_RATE,audioBitRate);
 
 
@@ -180,7 +178,7 @@ public class TranscodeWrapperDemo {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        encodec.configure(videoFormat , null,null,MediaCodec.CONFIGURE_FLAG_ENCODE);
+        encodec.configure(videoFormat, null,null,MediaCodec.CONFIGURE_FLAG_ENCODE);
         encodec.start();
 
         try {
@@ -206,19 +204,22 @@ public class TranscodeWrapperDemo {
         //////////video decode///////////////
         extractor.selectTrack(videoIndex);
         MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
+        boolean closeExtractor = false;
         while(true) {
-            int inputIndex = decodec.dequeueInputBuffer(10000l);
-            if (inputIndex >= 0) {
-                ByteBuffer inputBuffer = decodec.getInputBuffer(inputIndex);
-                int size = extractor.readSampleData(inputBuffer, 0);
-                if (size >= 0) {
-      //              Log.d("tag","video decode...");
-                    decodec.queueInputBuffer(inputIndex, 0, size, extractor.getSampleTime(), extractor.getSampleFlags());
-                    extractor.advance();
+            if (!closeExtractor) {
+                int inputIndex = decodec.dequeueInputBuffer(10000l);
+                if (inputIndex >= 0) {
+                    ByteBuffer inputBuffer = decodec.getInputBuffer(inputIndex);
+                    int size = extractor.readSampleData(inputBuffer, 0);
+                    if (size >= 0) {
+                        //              Log.d("tag","video decode...");
+                        decodec.queueInputBuffer(inputIndex, 0, size, extractor.getSampleTime(), extractor.getSampleFlags());
+                        extractor.advance();
 
-                } else {
-                    decodec.queueInputBuffer(inputIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
-
+                    } else {
+                        decodec.queueInputBuffer(inputIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
+                        closeExtractor = true;
+                    }
                 }
             }
 
@@ -249,24 +250,26 @@ public class TranscodeWrapperDemo {
     private void audioInputLoop(){
         audioExtractor.selectTrack(audioIndex);
         MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
+        boolean closeExtractor = false;
         while(true) {
-            int inputIndex = audioDecodec.dequeueInputBuffer(10000l);
-            if (inputIndex >= 0) {
-                ByteBuffer inputBuffer = audioDecodec.getInputBuffer(inputIndex);
-                int size = audioExtractor.readSampleData(inputBuffer, 0);
-                if (size >= 0) {
-                    //              Log.d("tag","video decode...");
-                    audioDecodec.queueInputBuffer(inputIndex, 0, size, audioExtractor.getSampleTime(), audioExtractor.getSampleFlags());
-                    audioExtractor.advance();
+            if (!closeExtractor) {
+                int inputIndex = audioDecodec.dequeueInputBuffer(10000l);
+                if (inputIndex >= 0) {
+                    ByteBuffer inputBuffer = audioDecodec.getInputBuffer(inputIndex);
+                    int size = audioExtractor.readSampleData(inputBuffer, 0);
+                    if (size >= 0) {
+                        //              Log.d("tag","video decode...");
+                        audioDecodec.queueInputBuffer(inputIndex, 0, size, audioExtractor.getSampleTime(), audioExtractor.getSampleFlags());
+                        audioExtractor.advance();
 
-                } else {
-                    audioDecodec.queueInputBuffer(inputIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
-
+                    } else {
+                        audioDecodec.queueInputBuffer(inputIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
+                        closeExtractor = true;
+                    }
                 }
             }
-
             int outputIndex = audioDecodec.dequeueOutputBuffer(info, 10000l);
-            if (outputIndex >= 0){
+            if (outputIndex >= 0 ){
                 ByteBuffer outputBuffer = audioDecodec.getOutputBuffer(outputIndex);
 
                 int inputBufferEncodeIndex = audioEncodec.dequeueInputBuffer(10000l);
@@ -301,19 +304,18 @@ public class TranscodeWrapperDemo {
                 case MediaCodec.INFO_OUTPUT_FORMAT_CHANGED: {
                     Log.d("tag","video format changed");
                     MediaFormat format = encodec.getOutputFormat();
+                    if (videoTrackIndex < 0)
                     videoTrackIndex = muxer.addTrack(format);
-                    startMuxer();
                     break;
                 }
                 default: {
                     ByteBuffer outputBuffer = encodec.getOutputBuffer(outputBufferIndex);
-                    if (info.size >= 0) {
-                        if (!isMuxerStarted) {
-                            startMuxer();
-                        } else {
+                    if (!isMuxerStarted) {
+                        startMuxer();
+                    }
+                    if (info.size >= 0 && isMuxerStarted) {
                             muxer.writeSampleData(videoTrackIndex, outputBuffer, info);
                             Log.d("tag", "video muxing");
-                        }
                     }
                     encodec.releaseOutputBuffer(outputBufferIndex, false);
                 }
@@ -325,7 +327,6 @@ public class TranscodeWrapperDemo {
             }
         }
         isMuxed++;
-
     }
 
     private void audioOutputLoop(){
@@ -339,19 +340,18 @@ public class TranscodeWrapperDemo {
                 case MediaCodec.INFO_OUTPUT_FORMAT_CHANGED: {
                     Log.d("tag","audio format changed");
                     MediaFormat format = audioEncodec.getOutputFormat();
+                    if (audioTrackIndex < 0)
                     audioTrackIndex = muxer.addTrack(format);
-                    startMuxer();
                     break;
                 }
                 default: {
                     ByteBuffer outputBuffer = audioEncodec.getOutputBuffer(outputBufferIndex);
-                    if (info.size >= 0) {
-                        if (!isMuxerStarted){
-                            startMuxer();
-                        }else {
+                    if (!isMuxerStarted){
+                        startMuxer();
+                    }
+                    if (info.size >= 0 && isMuxerStarted) {
                             muxer.writeSampleData(audioTrackIndex, outputBuffer, info);
                             Log.d("tag", "audio muxing");
-                        }
                     }
                     audioEncodec.releaseOutputBuffer(outputBufferIndex, false);
                 }
@@ -367,8 +367,9 @@ public class TranscodeWrapperDemo {
 
     private synchronized void startMuxer(){
         if ( 0 <= audioTrackIndex && 0<= videoTrackIndex && !isMuxerStarted){
-            isMuxerStarted = true;
+
             muxer.start();
+            isMuxerStarted = true;
         }
     }
     /////////public //////////
