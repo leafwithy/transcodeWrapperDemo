@@ -6,10 +6,13 @@ import android.media.MediaCodecInfo;
 import android.media.MediaExtractor;
 import android.media.MediaFormat;
 import android.media.MediaMuxer;
+import android.os.Bundle;
+import android.os.Message;
 import android.util.Log;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.text.DecimalFormat;
 
 /**
  * Created by weizheng.huang on 2019-10-18.
@@ -22,7 +25,7 @@ public class TranscodeWrapperDemo {
     private MediaCodec decodec,encodec,audioDecodec,audioEncodec;
 
     private MediaMuxer muxer;
-
+    private ProgressBarDialog.MyHandler handler = ProgressBarDialog.getHandler();
     private String filePath = null;
     private AssetFileDescriptor srcFilePath = null;
     private int isMuxed = 0;
@@ -31,6 +34,15 @@ public class TranscodeWrapperDemo {
     private int videoIndex  = -1;
     private int audioIndex = -1;
     private boolean isMuxerStarted = false;
+    private boolean pauseTranscode = false;
+    private double durationTotal = 0;
+    private double currentDuration = 0;
+
+
+
+    public synchronized  void setPauseTranscode(boolean TRUEORFALSE){
+        pauseTranscode = TRUEORFALSE;
+    }
 
     public TranscodeWrapperDemo(String filePath, AssetFileDescriptor srcFilePath) {
         this.filePath = filePath;
@@ -71,6 +83,7 @@ public class TranscodeWrapperDemo {
             encodec.release();
             Log.v("tag", "released encode");
             releaseMuxer();
+
         }
     });
 
@@ -139,7 +152,7 @@ public class TranscodeWrapperDemo {
                 bitRate = format.getInteger(MediaFormat.KEY_BIT_RATE);
                 width = format.getInteger(MediaFormat.KEY_WIDTH);
                 height = format.getInteger(MediaFormat.KEY_HEIGHT);
-
+                durationTotal = format.getLong(MediaFormat.KEY_DURATION);
                 decodec.configure(format,null,null,0);
                 decodec.start();
                 continue;
@@ -164,7 +177,7 @@ public class TranscodeWrapperDemo {
         MediaFormat videoFormat = MediaFormat.createVideoFormat(videoFormatType, width, height);
 
         videoFormat.setInteger(MediaFormat.KEY_FRAME_RATE, frameRate);
-        videoFormat.setInteger(MediaFormat.KEY_BIT_RATE,bitRate);
+        videoFormat.setInteger(MediaFormat.KEY_BIT_RATE,bitRate / 2);
         videoFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible);
         videoFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL,frameRate * 2);
 
@@ -197,7 +210,9 @@ public class TranscodeWrapperDemo {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
+        MediaFormat format1 = encodec.getOutputFormat();
+        MediaFormat format2 = audioEncodec.getOutputFormat();
+        Log.d("tag","muxer init");
     }
 
     private void inputLoop() {
@@ -244,6 +259,13 @@ public class TranscodeWrapperDemo {
                 Log.d("tag","start release Decode");
                 break;
             }
+            while(pauseTranscode){
+                try {
+                    Thread.sleep(10l);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
         }
     }
 
@@ -289,6 +311,13 @@ public class TranscodeWrapperDemo {
                 Log.d("tag","start release Decode");
                 break;
             }
+            while(pauseTranscode){
+                try {
+                    Thread.sleep(10l);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
         }
     }
 
@@ -314,16 +343,33 @@ public class TranscodeWrapperDemo {
                         startMuxer();
                     }
                     if (info.size >= 0 && isMuxerStarted) {
-                            muxer.writeSampleData(videoTrackIndex, outputBuffer, info);
-                            Log.d("tag", "video muxing");
+                        if ( 0 < info.presentationTimeUs) {
+                            currentDuration = (int) info.presentationTimeUs;
+
+                            Bundle bundle = new Bundle();
+                            bundle.putString("progress", new DecimalFormat(".0").format(((currentDuration / durationTotal) * 100)));
+                            Message message = new Message();
+                            message.setData(bundle);
+                            message.setTarget(handler);
+                            handler.sendMessage(message);
+                        }
+                        muxer.writeSampleData(videoTrackIndex, outputBuffer, info);
+                          Log.d("tag", "video muxing");
                     }
                     encodec.releaseOutputBuffer(outputBufferIndex, false);
                 }
             }
-            if ((info.flags&MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0){
+            if ((info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0){
 
                 Log.d("tag","start release video Encode");
                 break;
+            }
+            while(pauseTranscode){
+                try {
+                    Thread.sleep(10l);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
         }
         isMuxed++;
@@ -356,10 +402,17 @@ public class TranscodeWrapperDemo {
                     audioEncodec.releaseOutputBuffer(outputBufferIndex, false);
                 }
             }
-            if ((info.flags&MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0){
+            if ((info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0){
 
                 Log.d("tag","start release audio Encode");
                 break;
+            }
+            while(pauseTranscode){
+                try {
+                    Thread.sleep(10l);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
         }
         isMuxed++;
@@ -373,12 +426,13 @@ public class TranscodeWrapperDemo {
         }
     }
     /////////public //////////
-    public void startTranscode(){
+    public boolean startTranscode(){
 
         inputThread.start();
         audioInputThread.start();
         outputThread.start();
         audioOutputThread.start();
+        return true;
     }
 
 
