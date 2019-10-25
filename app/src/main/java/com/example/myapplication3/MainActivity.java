@@ -19,6 +19,7 @@ import androidx.core.app.ActivityCompat;
 public class MainActivity extends Activity {
 
     private TranscodeWrapperDemo transcodeWrapperDemo;
+
     private boolean isStarted = false;
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -56,9 +57,10 @@ public class MainActivity extends Activity {
     private void initTranscode(){
 
         AssetFileDescriptor srcFilePath = getResources().openRawResourceFd(R.raw.shape_of_my_heart);
-//        AssetFileDescriptor srcFilePath = getResources().openRawResourceFd(R.raw.guanghuisuiyue_huren);
+
+        AssetFileDescriptor srcFilePath2 = getResources().openRawResourceFd(R.raw.shape_of_my_heart2);
         String filePath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/shape.mp4";
-        transcodeWrapperDemo = new TranscodeWrapperDemo(filePath, srcFilePath);
+        transcodeWrapperDemo = new TranscodeWrapperDemo(filePath, srcFilePath,srcFilePath2);
     }
     private boolean verifyPermission(Activity activity){
         String [] PERMISSIONS_STORAGE = {

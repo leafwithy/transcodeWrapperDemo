@@ -28,6 +28,7 @@ public class TranscodeWrapperDemo {
     private ProgressBarDialog.MyHandler handler = ProgressBarDialog.getHandler();
     private String filePath = null;
     private AssetFileDescriptor srcFilePath = null;
+    private AssetFileDescriptor srcFilePath2 = null;
     private int isMuxed = 0;
     private int audioTrackIndex = -1 ;
     private int videoTrackIndex = -1 ;
@@ -37,16 +38,17 @@ public class TranscodeWrapperDemo {
     private boolean pauseTranscode = false;
     private double durationTotal = 0;
     private double currentDuration = 0;
-
+    private long TIME_US = 50000l;
 
 
     public synchronized  void setPauseTranscode(boolean TRUEORFALSE){
         pauseTranscode = TRUEORFALSE;
     }
 
-    public TranscodeWrapperDemo(String filePath, AssetFileDescriptor srcFilePath) {
+    public TranscodeWrapperDemo(String filePath, AssetFileDescriptor srcFilePath,AssetFileDescriptor srcFilePath2) {
         this.filePath = filePath;
         this.srcFilePath = srcFilePath;
+        this.srcFilePath2 = srcFilePath2;
         initMediaExtractor();
         initMediaCodec();
         initMediaMuxer();
@@ -82,6 +84,7 @@ public class TranscodeWrapperDemo {
             encodec.stop();
             encodec.release();
             Log.v("tag", "released encode");
+            isMuxed++;
             releaseMuxer();
 
         }
@@ -94,6 +97,7 @@ public class TranscodeWrapperDemo {
             audioEncodec.stop();
             audioEncodec.release();
             Log.v("tag","released audio encode");
+            isMuxed++;
             releaseMuxer();
         }
     });
@@ -115,7 +119,7 @@ public class TranscodeWrapperDemo {
         }
         audioExtractor = new MediaExtractor();
         try {
-            audioExtractor.setDataSource(srcFilePath);
+            audioExtractor.setDataSource(srcFilePath2);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -177,12 +181,14 @@ public class TranscodeWrapperDemo {
         MediaFormat videoFormat = MediaFormat.createVideoFormat(videoFormatType, width, height);
 
         videoFormat.setInteger(MediaFormat.KEY_FRAME_RATE, frameRate);
-        videoFormat.setInteger(MediaFormat.KEY_BIT_RATE,bitRate / 2);
+        videoFormat.setInteger(MediaFormat.KEY_BIT_RATE,bitRate );
         videoFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible);
         videoFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL,frameRate * 2);
 
         MediaFormat audioFormat = MediaFormat.createAudioFormat(audioFormatType, sampleRate, channelCount);
         audioFormat.setInteger(MediaFormat.KEY_BIT_RATE,audioBitRate);
+
+        Log.d("size",durationTotal * (bitRate + audioBitRate) / 1024 /1024 / 8000000+"");
 
 
 
@@ -210,9 +216,6 @@ public class TranscodeWrapperDemo {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        MediaFormat format1 = encodec.getOutputFormat();
-        MediaFormat format2 = audioEncodec.getOutputFormat();
-        Log.d("tag","muxer init");
     }
 
     private void inputLoop() {
@@ -222,7 +225,7 @@ public class TranscodeWrapperDemo {
         boolean closeExtractor = false;
         while(true) {
             if (!closeExtractor) {
-                int inputIndex = decodec.dequeueInputBuffer(10000l);
+                int inputIndex = decodec.dequeueInputBuffer(TIME_US);
                 if (inputIndex >= 0) {
                     ByteBuffer inputBuffer = decodec.getInputBuffer(inputIndex);
                     int size = extractor.readSampleData(inputBuffer, 0);
@@ -238,22 +241,22 @@ public class TranscodeWrapperDemo {
                 }
             }
 
-            int outputIndex = decodec.dequeueOutputBuffer(info, 10000l);
+            int outputIndex = decodec.dequeueOutputBuffer(info, TIME_US);
             if (outputIndex >= 0){
-                    ByteBuffer outputBuffer = decodec.getOutputBuffer(outputIndex);
+                ByteBuffer outputBuffer = decodec.getOutputBuffer(outputIndex);
 
-                    int inputBufferEncodeIndex = encodec.dequeueInputBuffer(10000l);
-                    if (inputBufferEncodeIndex >= 0) {
-                        ByteBuffer inputEncodeBuffer = encodec.getInputBuffer(inputBufferEncodeIndex);
-                        if (info.size >= 0) {
-                            //              Log.d("tag","into video encode...");
-                            inputEncodeBuffer.put(outputBuffer);
-                            encodec.queueInputBuffer(inputBufferEncodeIndex, 0, info.size, info.presentationTimeUs, info.flags);
-                        } else {
-                            encodec.queueInputBuffer(inputBufferEncodeIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
-                        }
+                int inputBufferEncodeIndex = encodec.dequeueInputBuffer(TIME_US);
+                if (inputBufferEncodeIndex >= 0) {
+                    ByteBuffer inputEncodeBuffer = encodec.getInputBuffer(inputBufferEncodeIndex);
+                    if (info.size >= 0) {
+                        //              Log.d("tag","into video encode...");
+                        inputEncodeBuffer.put(outputBuffer);
+                        encodec.queueInputBuffer(inputBufferEncodeIndex, 0, info.size, info.presentationTimeUs, info.flags);
+                    } else {
+                        encodec.queueInputBuffer(inputBufferEncodeIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
                     }
-                    decodec.releaseOutputBuffer(outputIndex, false);
+                }
+                decodec.releaseOutputBuffer(outputIndex, false);
             }
             if ((info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
                 Log.d("tag","start release Decode");
@@ -275,7 +278,7 @@ public class TranscodeWrapperDemo {
         boolean closeExtractor = false;
         while(true) {
             if (!closeExtractor) {
-                int inputIndex = audioDecodec.dequeueInputBuffer(10000l);
+                int inputIndex = audioDecodec.dequeueInputBuffer(TIME_US);
                 if (inputIndex >= 0) {
                     ByteBuffer inputBuffer = audioDecodec.getInputBuffer(inputIndex);
                     int size = audioExtractor.readSampleData(inputBuffer, 0);
@@ -290,11 +293,11 @@ public class TranscodeWrapperDemo {
                     }
                 }
             }
-            int outputIndex = audioDecodec.dequeueOutputBuffer(info, 10000l);
+            int outputIndex = audioDecodec.dequeueOutputBuffer(info, TIME_US);
             if (outputIndex >= 0 ){
                 ByteBuffer outputBuffer = audioDecodec.getOutputBuffer(outputIndex);
 
-                int inputBufferEncodeIndex = audioEncodec.dequeueInputBuffer(10000l);
+                int inputBufferEncodeIndex = audioEncodec.dequeueInputBuffer(TIME_US);
                 if (inputBufferEncodeIndex >= 0) {
                     ByteBuffer inputEncodeBuffer = audioEncodec.getInputBuffer(inputBufferEncodeIndex);
                     if (info.size >= 0) {
@@ -324,9 +327,9 @@ public class TranscodeWrapperDemo {
     private void outputLoop(){
         ////////////video encode/////////////////////
         MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
-       // MediaCodec.BufferInfo mediaInfo = new MediaCodec.BufferInfo();
+        // MediaCodec.BufferInfo mediaInfo = new MediaCodec.BufferInfo();
         while(true){
-            int outputBufferIndex = encodec.dequeueOutputBuffer(info,10000l);
+            int outputBufferIndex = encodec.dequeueOutputBuffer(info,TIME_US);
             switch (outputBufferIndex ) {
                 case MediaCodec.INFO_TRY_AGAIN_LATER:
                     break;
@@ -334,7 +337,7 @@ public class TranscodeWrapperDemo {
                     Log.d("tag","video format changed");
                     MediaFormat format = encodec.getOutputFormat();
                     if (videoTrackIndex < 0)
-                    videoTrackIndex = muxer.addTrack(format);
+                        videoTrackIndex = muxer.addTrack(format);
                     break;
                 }
                 default: {
@@ -354,7 +357,7 @@ public class TranscodeWrapperDemo {
                             handler.sendMessage(message);
                         }
                         muxer.writeSampleData(videoTrackIndex, outputBuffer, info);
-                          Log.d("tag", "video muxing");
+                        Log.d("tag", "video muxing");
                     }
                     encodec.releaseOutputBuffer(outputBufferIndex, false);
                 }
@@ -372,14 +375,14 @@ public class TranscodeWrapperDemo {
                 }
             }
         }
-        isMuxed++;
+
     }
 
     private void audioOutputLoop(){
         MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
         // MediaCodec.BufferInfo mediaInfo = new MediaCodec.BufferInfo();
         while(true){
-            int outputBufferIndex = audioEncodec.dequeueOutputBuffer(info,10000l);
+            int outputBufferIndex = audioEncodec.dequeueOutputBuffer(info,TIME_US);
             switch (outputBufferIndex ) {
                 case MediaCodec.INFO_TRY_AGAIN_LATER:
                     break;
@@ -387,7 +390,7 @@ public class TranscodeWrapperDemo {
                     Log.d("tag","audio format changed");
                     MediaFormat format = audioEncodec.getOutputFormat();
                     if (audioTrackIndex < 0)
-                    audioTrackIndex = muxer.addTrack(format);
+                        audioTrackIndex = muxer.addTrack(format);
                     break;
                 }
                 default: {
@@ -396,8 +399,8 @@ public class TranscodeWrapperDemo {
                         startMuxer();
                     }
                     if (info.size >= 0 && isMuxerStarted) {
-                            muxer.writeSampleData(audioTrackIndex, outputBuffer, info);
-                            Log.d("tag", "audio muxing");
+                        muxer.writeSampleData(audioTrackIndex, outputBuffer, info);
+                        Log.d("tag", "audio muxing");
                     }
                     audioEncodec.releaseOutputBuffer(outputBufferIndex, false);
                 }
@@ -415,7 +418,7 @@ public class TranscodeWrapperDemo {
                 }
             }
         }
-        isMuxed++;
+
     }
 
     private synchronized void startMuxer(){
