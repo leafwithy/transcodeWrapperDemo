@@ -36,23 +36,32 @@ public class TranscodeWrapperDemo {
     private int audioIndex = -1;
     private boolean isMuxerStarted = false;
     private boolean pauseTranscode = false;
+    private double sizeTotal = 0;
+    private double assignSize = 0;
     private double durationTotal = 0;
     private double currentDuration = 0;
-    private long TIME_US = 50000l;
+    private long TIME_US = 60000l;
 
 
     public synchronized  void setPauseTranscode(boolean TRUEORFALSE){
         pauseTranscode = TRUEORFALSE;
     }
 
+    public void setAssignSize(Double size){
+        assignSize = size;
+    }
+
     public TranscodeWrapperDemo(String filePath, AssetFileDescriptor srcFilePath,AssetFileDescriptor srcFilePath2) {
         this.filePath = filePath;
         this.srcFilePath = srcFilePath;
         this.srcFilePath2 = srcFilePath2;
+    }
+
+
+    public void init(){
         initMediaExtractor();
         initMediaCodec();
         initMediaMuxer();
-
     }
 
     private Thread inputThread = new Thread(new Runnable() {
@@ -177,18 +186,20 @@ public class TranscodeWrapperDemo {
             }
 
         }
+        sizeTotal = Double.valueOf(new DecimalFormat(".0").format(durationTotal * (bitRate +  audioBitRate) / 1024 /1024 / 8000000));
+        double rateOfSize = assignSize / sizeTotal ;
+
 
         MediaFormat videoFormat = MediaFormat.createVideoFormat(videoFormatType, width, height);
 
         videoFormat.setInteger(MediaFormat.KEY_FRAME_RATE, frameRate);
-        videoFormat.setInteger(MediaFormat.KEY_BIT_RATE,bitRate );
+        videoFormat.setInteger(MediaFormat.KEY_BIT_RATE,(int)(bitRate * rateOfSize));
         videoFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible);
-        videoFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL,frameRate * 2);
+        videoFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL,frameRate);
 
         MediaFormat audioFormat = MediaFormat.createAudioFormat(audioFormatType, sampleRate, channelCount);
-        audioFormat.setInteger(MediaFormat.KEY_BIT_RATE,audioBitRate);
+        audioFormat.setInteger(MediaFormat.KEY_BIT_RATE,(int)(audioBitRate * rateOfSize));
 
-        Log.d("size",durationTotal * (bitRate + audioBitRate) / 1024 /1024 / 8000000+"");
 
 
 
@@ -223,6 +234,8 @@ public class TranscodeWrapperDemo {
         extractor.selectTrack(videoIndex);
         MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
         boolean closeExtractor = false;
+
+
         while(true) {
             if (!closeExtractor) {
                 int inputIndex = decodec.dequeueInputBuffer(TIME_US);
@@ -230,10 +243,10 @@ public class TranscodeWrapperDemo {
                     ByteBuffer inputBuffer = decodec.getInputBuffer(inputIndex);
                     int size = extractor.readSampleData(inputBuffer, 0);
                     if (size >= 0) {
+
                         //              Log.d("tag","video decode...");
                         decodec.queueInputBuffer(inputIndex, 0, size, extractor.getSampleTime(), extractor.getSampleFlags());
                         extractor.advance();
-
                     } else {
                         decodec.queueInputBuffer(inputIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
                         closeExtractor = true;

@@ -29,6 +29,7 @@ public class MainActivity extends Activity {
         Button pauseBtn = findViewById(R.id.pauseTranscodeBtn);
 
         initTranscode();
+
         btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -57,10 +58,12 @@ public class MainActivity extends Activity {
     private void initTranscode(){
 
         AssetFileDescriptor srcFilePath = getResources().openRawResourceFd(R.raw.shape_of_my_heart);
-
         AssetFileDescriptor srcFilePath2 = getResources().openRawResourceFd(R.raw.shape_of_my_heart2);
         String filePath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/shape.mp4";
         transcodeWrapperDemo = new TranscodeWrapperDemo(filePath, srcFilePath,srcFilePath2);
+        transcodeWrapperDemo.setAssignSize(20.0);
+        transcodeWrapperDemo.init();
+
     }
     private boolean verifyPermission(Activity activity){
         String [] PERMISSIONS_STORAGE = {
