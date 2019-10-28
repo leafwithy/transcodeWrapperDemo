@@ -63,6 +63,7 @@ public class MainActivity extends Activity {
         transcodeWrapperDemo = new TranscodeWrapperDemo(filePath, srcFilePath,srcFilePath2);
         transcodeWrapperDemo.setAssignSize(20.0);
         transcodeWrapperDemo.init();
+        transcodeWrapperDemo.setTailTime(20,60,true);
 
     }
     private boolean verifyPermission(Activity activity){

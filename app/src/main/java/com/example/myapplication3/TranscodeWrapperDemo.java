@@ -41,7 +41,16 @@ public class TranscodeWrapperDemo {
     private double durationTotal = 0;
     private double currentDuration = 0;
     private long TIME_US = 60000l;
+    private long startTime = 0;
+    private long endTime = 0;
+    private boolean isNeedTailed = false;
 
+
+    public void setTailTime(long startTime,long endTime,boolean TRUEOFFALSE){
+        this.startTime = startTime * 1000000;
+        this.endTime = endTime * 1000000;
+        this.isNeedTailed = TRUEOFFALSE;
+    }
 
     public synchronized  void setPauseTranscode(boolean TRUEORFALSE){
         pauseTranscode = TRUEORFALSE;
@@ -186,6 +195,7 @@ public class TranscodeWrapperDemo {
             }
 
         }
+
         sizeTotal = Double.valueOf(new DecimalFormat(".0").format(durationTotal * (bitRate +  audioBitRate) / 1024 /1024 / 8000000));
         double rateOfSize = assignSize / sizeTotal ;
 
@@ -234,8 +244,9 @@ public class TranscodeWrapperDemo {
         extractor.selectTrack(videoIndex);
         MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
         boolean closeExtractor = false;
-
-
+        if (isNeedTailed){
+            extractor.seekTo(startTime,MediaExtractor.SEEK_TO_CLOSEST_SYNC);
+        }
         while(true) {
             if (!closeExtractor) {
                 int inputIndex = decodec.dequeueInputBuffer(TIME_US);
@@ -243,12 +254,16 @@ public class TranscodeWrapperDemo {
                     ByteBuffer inputBuffer = decodec.getInputBuffer(inputIndex);
                     int size = extractor.readSampleData(inputBuffer, 0);
                     if (size >= 0) {
-
-                        //              Log.d("tag","video decode...");
-                        decodec.queueInputBuffer(inputIndex, 0, size, extractor.getSampleTime(), extractor.getSampleFlags());
-                        extractor.advance();
-                    } else {
-                        decodec.queueInputBuffer(inputIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
+                        if (extractor.getSampleTime() > endTime && isNeedTailed){
+                            decodec.queueInputBuffer(inputIndex,0,0,0,MediaCodec.BUFFER_FLAG_END_OF_STREAM);
+                            closeExtractor = true;
+                        }else {
+                            //              Log.d("tag","video decode...");
+                            decodec.queueInputBuffer(inputIndex, 0, size, extractor.getSampleTime(), extractor.getSampleFlags());
+                            extractor.advance();
+                        }
+                    }else{
+                        decodec.queueInputBuffer(inputIndex,0,0,0,MediaCodec.BUFFER_FLAG_END_OF_STREAM);
                         closeExtractor = true;
                     }
                 }
@@ -289,6 +304,9 @@ public class TranscodeWrapperDemo {
         audioExtractor.selectTrack(audioIndex);
         MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
         boolean closeExtractor = false;
+        if (isNeedTailed){
+            audioExtractor.seekTo(startTime,MediaExtractor.SEEK_TO_CLOSEST_SYNC);
+        }
         while(true) {
             if (!closeExtractor) {
                 int inputIndex = audioDecodec.dequeueInputBuffer(TIME_US);
@@ -296,14 +314,19 @@ public class TranscodeWrapperDemo {
                     ByteBuffer inputBuffer = audioDecodec.getInputBuffer(inputIndex);
                     int size = audioExtractor.readSampleData(inputBuffer, 0);
                     if (size >= 0) {
-                        //              Log.d("tag","video decode...");
-                        audioDecodec.queueInputBuffer(inputIndex, 0, size, audioExtractor.getSampleTime(), audioExtractor.getSampleFlags());
-                        audioExtractor.advance();
-
-                    } else {
-                        audioDecodec.queueInputBuffer(inputIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
+                        if (audioExtractor.getSampleTime() > endTime && isNeedTailed) {
+                            audioDecodec.queueInputBuffer(inputIndex,0,0,0,MediaCodec.BUFFER_FLAG_END_OF_STREAM);
+                            closeExtractor = true;
+                        }else {
+                            //              Log.d("tag","video decode...");
+                            audioDecodec.queueInputBuffer(inputIndex, 0, size, audioExtractor.getSampleTime(), audioExtractor.getSampleFlags());
+                            audioExtractor.advance();
+                        }
+                    }else{
+                        audioDecodec.queueInputBuffer(inputIndex,0,0,0,MediaCodec.BUFFER_FLAG_END_OF_STREAM);
                         closeExtractor = true;
                     }
+
                 }
             }
             int outputIndex = audioDecodec.dequeueOutputBuffer(info, TIME_US);
