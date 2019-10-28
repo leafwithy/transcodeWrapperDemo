@@ -40,7 +40,7 @@ public class TranscodeWrapperDemo {
     private double assignSize = 0;
     private double durationTotal = 0;
     private double currentDuration = 0;
-    private long TIME_US = 60000l;
+    private long TIME_US = 70000l;
     private long startTime = 0;
     private long endTime = 0;
     private boolean isNeedTailed = false;
@@ -76,6 +76,7 @@ public class TranscodeWrapperDemo {
     private Thread inputThread = new Thread(new Runnable() {
         @Override
         public void run() {
+
             inputLoop();
             extractor.release();
             decodec.stop();
@@ -87,6 +88,11 @@ public class TranscodeWrapperDemo {
     private Thread audioInputThread = new Thread(new Runnable() {
         @Override
         public void run() {
+            try {
+                Thread.sleep(1000l);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
             audioInputLoop();
             audioExtractor.release();
             audioDecodec.stop();
@@ -111,6 +117,7 @@ public class TranscodeWrapperDemo {
     private Thread audioOutputThread = new Thread(new Runnable() {
         @Override
         public void run() {
+
             audioOutputLoop();
             audioEncodec.stop();
             audioEncodec.release();
@@ -193,7 +200,6 @@ public class TranscodeWrapperDemo {
                 audioDecodec.configure(format,null,null,0);
                 audioDecodec.start();
             }
-
         }
 
         sizeTotal = Double.valueOf(new DecimalFormat(".0").format(durationTotal * (bitRate +  audioBitRate) / 1024 /1024 / 8000000));
@@ -203,12 +209,12 @@ public class TranscodeWrapperDemo {
         MediaFormat videoFormat = MediaFormat.createVideoFormat(videoFormatType, width, height);
 
         videoFormat.setInteger(MediaFormat.KEY_FRAME_RATE, frameRate);
-        videoFormat.setInteger(MediaFormat.KEY_BIT_RATE,(int)(bitRate * rateOfSize));
+        videoFormat.setInteger(MediaFormat.KEY_BIT_RATE,(int)(bitRate ));
         videoFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible);
         videoFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL,frameRate);
 
         MediaFormat audioFormat = MediaFormat.createAudioFormat(audioFormatType, sampleRate, channelCount);
-        audioFormat.setInteger(MediaFormat.KEY_BIT_RATE,(int)(audioBitRate * rateOfSize));
+        audioFormat.setInteger(MediaFormat.KEY_BIT_RATE,(int)(audioBitRate ));
 
 
 
@@ -270,6 +276,7 @@ public class TranscodeWrapperDemo {
             }
 
             int outputIndex = decodec.dequeueOutputBuffer(info, TIME_US);
+
             if (outputIndex >= 0){
                 ByteBuffer outputBuffer = decodec.getOutputBuffer(outputIndex);
 
@@ -361,6 +368,7 @@ public class TranscodeWrapperDemo {
     }
 
     private void outputLoop(){
+
         ////////////video encode/////////////////////
         MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
         // MediaCodec.BufferInfo mediaInfo = new MediaCodec.BufferInfo();
