@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
@@ -18,8 +19,15 @@ import androidx.core.app.ActivityCompat;
  */
 public class MainActivity extends Activity {
 
-    private TranscodeWrapperDemo2 transcodeWrapperDemo;
-
+    private TranscodeWrapperDemo transcodeWrapperDemo;
+    private EditText startTimeS;
+    private EditText startTimeM;
+    private EditText endTimeM;
+    private EditText endTimeS;
+    private EditText fileSize;
+    private long startTime;
+    private long endTime;
+    private double fileRate = 100;
     private boolean isStarted = false;
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -27,12 +35,26 @@ public class MainActivity extends Activity {
         setContentView(R.layout.layout);
         Button btn = findViewById(R.id.btn);
         Button pauseBtn = findViewById(R.id.pauseTranscodeBtn);
+        startTimeS = findViewById(R.id.secondsOfStartTime);
+        startTimeM = findViewById(R.id.minuteOfStartTime);
+        endTimeM = findViewById(R.id.minuteOfEndTime);
+        endTimeS = findViewById(R.id.secondsOfEndTime);
+        fileSize = findViewById(R.id.FileSize);
 
-        initTranscode();
+
 
         btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                String SM = String.valueOf(startTimeM.getText()) ;
+                String SS = String.valueOf(startTimeS.getText());
+                String EM = String.valueOf(endTimeM.getText());
+                String ES = String.valueOf(endTimeS.getText());
+                String FR = String.valueOf(fileSize.getText());
+                startTime = Long.valueOf(!SM.equals("") ? SM : "0") * 60 + Long.valueOf(!SS.equals("") ? SS : "0");
+                endTime = Long.valueOf(!EM.equals("") ? EM : "0") * 60 + Long.valueOf(!ES.equals("") ? ES : "0");
+                fileRate = Double.valueOf(!FR.equals("") ? FR : "100.0");
+                initTranscode();
                 if (verifyPermission(MainActivity.this)) {
                     startActivity(new Intent(MainActivity.this,ProgressBarDialog.class));
                     if (!isStarted) {
@@ -60,10 +82,10 @@ public class MainActivity extends Activity {
         AssetFileDescriptor srcFilePath = getResources().openRawResourceFd(R.raw.shape_of_my_heart);
         AssetFileDescriptor srcFilePath2 = getResources().openRawResourceFd(R.raw.shape_of_my_heart2);
         String filePath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/shape.mp4";
-        transcodeWrapperDemo = new TranscodeWrapperDemo2(filePath, srcFilePath,srcFilePath2);
-        transcodeWrapperDemo.setAssignSize(20.0);
+        transcodeWrapperDemo = new TranscodeWrapperDemo(filePath, srcFilePath,srcFilePath2);
+        transcodeWrapperDemo.setAssignSize(fileRate);
         transcodeWrapperDemo.init();
-        transcodeWrapperDemo.setTailTime(20,60,false);
+        transcodeWrapperDemo.setTailTime(startTime,endTime);
 
     }
     private boolean verifyPermission(Activity activity){
@@ -85,6 +107,7 @@ public class MainActivity extends Activity {
             e.printStackTrace();
         }
     }
+
 
 
 
