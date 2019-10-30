@@ -216,7 +216,7 @@ public class TranscodeWrapperDemo {
         videoFormat.setInteger(MediaFormat.KEY_FRAME_RATE, frameRate);
         videoFormat.setInteger(MediaFormat.KEY_BIT_RATE,(int)(bitRate * assignSizeRate));
         videoFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible);
-        videoFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL,frameRate);
+        videoFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL,frameRate * 2);
 
         MediaFormat audioFormat = MediaFormat.createAudioFormat(audioFormatType, sampleRate, channelCount);
         audioFormat.setInteger(MediaFormat.KEY_BIT_RATE,(int)(audioBitRate * assignSizeRate));
@@ -256,7 +256,7 @@ public class TranscodeWrapperDemo {
         MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
         boolean closeExtractor = false;
         if (isNeedTailed){
-            extractor.seekTo(startTime,MediaExtractor.SEEK_TO_NEXT_SYNC);
+            extractor.seekTo(startTime,MediaExtractor.SEEK_TO_CLOSEST_SYNC);
         }
         while(true) {
             if (!closeExtractor) {
@@ -315,7 +315,7 @@ public class TranscodeWrapperDemo {
         MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
         boolean closeExtractor = false;
         if (isNeedTailed){
-            audioExtractor.seekTo(startTime,MediaExtractor.SEEK_TO_NEXT_SYNC);
+            audioExtractor.seekTo(startTime,MediaExtractor.SEEK_TO_CLOSEST_SYNC);
         }
         while(true) {
             if (!closeExtractor) {

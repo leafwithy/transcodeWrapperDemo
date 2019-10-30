@@ -27,7 +27,7 @@ public class MainActivity extends Activity {
     private EditText fileSize;
     private long startTime;
     private long endTime;
-    private double fileRate = 100;
+    private double fileRate = 1.0;
     private boolean isStarted = false;
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -53,7 +53,7 @@ public class MainActivity extends Activity {
                 String FR = String.valueOf(fileSize.getText());
                 startTime = Long.valueOf(!SM.equals("") ? SM : "0") * 60 + Long.valueOf(!SS.equals("") ? SS : "0");
                 endTime = Long.valueOf(!EM.equals("") ? EM : "0") * 60 + Long.valueOf(!ES.equals("") ? ES : "0");
-                fileRate = Double.valueOf(!FR.equals("") ? FR : "100.0");
+                fileRate = Double.valueOf(!FR.equals("") ? FR : "100") / 100.0;
                 initTranscode();
                 if (verifyPermission(MainActivity.this)) {
                     startActivity(new Intent(MainActivity.this,ProgressBarDialog.class));
@@ -100,13 +100,6 @@ public class MainActivity extends Activity {
         return permission == PackageManager.PERMISSION_GRANTED;
     }
 
-    public static void sleepRead(){
-        try {
-            Thread.sleep(2000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
 
 
 

@@ -16,7 +16,7 @@ import androidx.annotation.Nullable;
 public class ProgressBarDialog extends Activity {
     private static MyHandler handler = new MyHandler();
     private static TextView text1;
-    private double progress;
+    private static double progress;
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -25,6 +25,14 @@ public class ProgressBarDialog extends Activity {
         text1= findViewById(R.id.progress);
 
 
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (progress == 100){
+            finish();
+        }
     }
 
     public static MyHandler getHandler(){
@@ -37,8 +45,14 @@ public class ProgressBarDialog extends Activity {
         @Override
         public void handleMessage(@NonNull Message msg) {
             Bundle  bundle = msg.getData();
-            String progress = bundle.getString("progress");
-            text1.setText(progress+"%");
+//            String videoprogress =  bundle.getString("videoProgress");
+//            String audioprogress = bundle.getString("audioProgress");
+//            double videoPro = videoprogress == null ? progress : Double.valueOf(videoprogress);
+//            double audioPro = audioprogress == null ? progress : Double.valueOf(audioprogress);
+//            progress = videoPro > audioPro ? videoPro : audioPro;
+            String videoPro = bundle.getString("progress");
+            progress = Double.valueOf(videoPro);
+            text1.setText(""+progress+"%");
         }
     }
 }
