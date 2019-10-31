@@ -125,7 +125,7 @@ class OutputThread extends Thread{
             isMuxerStarted = true;
         }
     }
-    private void releaseMuxer(){
+    private static synchronized void releaseMuxer(){
         if (isMuxed == 2){
             isMuxed++;
             muxer.stop();

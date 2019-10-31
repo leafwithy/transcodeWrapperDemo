@@ -45,13 +45,13 @@ public class ProgressBarDialog extends Activity {
         @Override
         public void handleMessage(@NonNull Message msg) {
             Bundle  bundle = msg.getData();
-//            String videoprogress =  bundle.getString("videoProgress");
-//            String audioprogress = bundle.getString("audioProgress");
-//            double videoPro = videoprogress == null ? progress : Double.valueOf(videoprogress);
-//            double audioPro = audioprogress == null ? progress : Double.valueOf(audioprogress);
-//            progress = videoPro > audioPro ? videoPro : audioPro;
-            String videoPro = bundle.getString("progress");
-            progress = Double.valueOf(videoPro);
+            String videoprogress =  bundle.getString("videoProgress");
+            String audioprogress = bundle.getString("audioProgress");
+            double videoPro = videoprogress == null ? progress : Double.valueOf(videoprogress);
+            double audioPro = audioprogress == null ? progress : Double.valueOf(audioprogress);
+            progress = videoPro > audioPro ? videoPro : audioPro;
+//            String videoPro = bundle.getString("progress");
+//            progress = Double.valueOf(videoPro);
             text1.setText(""+progress+"%");
         }
     }

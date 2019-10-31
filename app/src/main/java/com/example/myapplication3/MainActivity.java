@@ -19,7 +19,8 @@ import androidx.core.app.ActivityCompat;
  */
 public class MainActivity extends Activity {
 
-    private TranscodeWrapperDemo transcodeWrapperDemo;
+    private TranscodeWrapperDemo2 transcodeWrapperDemo;
+    private DemuxAndMux demuxAndMux;
     private EditText startTimeS;
     private EditText startTimeM;
     private EditText endTimeM;
@@ -29,32 +30,47 @@ public class MainActivity extends Activity {
     private long endTime;
     private double fileRate = 1.0;
     private boolean isStarted = false;
+    private AssetFileDescriptor srcFilePath;
+    private AssetFileDescriptor srcFilePath2;
+    private String filePath;
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.layout);
         Button btn = findViewById(R.id.btn);
         Button pauseBtn = findViewById(R.id.pauseTranscodeBtn);
+        Button muxBtn = findViewById(R.id.mux);
         startTimeS = findViewById(R.id.secondsOfStartTime);
         startTimeM = findViewById(R.id.minuteOfStartTime);
         endTimeM = findViewById(R.id.minuteOfEndTime);
         endTimeS = findViewById(R.id.secondsOfEndTime);
         fileSize = findViewById(R.id.FileSize);
+        srcFilePath2 = getResources().openRawResourceFd(R.raw.shape_of_my_heart2);
+        filePath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/shape2.mp4";
+        srcFilePath = getResources().openRawResourceFd(R.raw.shape_of_my_heart);
+        String SM = String.valueOf(startTimeM.getText()) ;
+        String SS = String.valueOf(startTimeS.getText());
+        String EM = String.valueOf(endTimeM.getText());
+        String ES = String.valueOf(endTimeS.getText());
+        String FR = String.valueOf(fileSize.getText());
+        startTime = Long.valueOf(!SM.equals("") ? SM : "0") * 60 + Long.valueOf(!SS.equals("") ? SS : "0");
+        endTime = Long.valueOf(!EM.equals("") ? EM : "0") * 60 + Long.valueOf(!ES.equals("") ? ES : "0");
+        fileRate = Double.valueOf(!FR.equals("") ? FR : "100") / 100.0;
+        initTranscode();
+        initDemuxAndMux();
 
-
-
+        muxBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (verifyPermission(MainActivity.this)) {
+                    demuxAndMux.startDemuxAndMux();
+                }
+            }
+        });
         btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                String SM = String.valueOf(startTimeM.getText()) ;
-                String SS = String.valueOf(startTimeS.getText());
-                String EM = String.valueOf(endTimeM.getText());
-                String ES = String.valueOf(endTimeS.getText());
-                String FR = String.valueOf(fileSize.getText());
-                startTime = Long.valueOf(!SM.equals("") ? SM : "0") * 60 + Long.valueOf(!SS.equals("") ? SS : "0");
-                endTime = Long.valueOf(!EM.equals("") ? EM : "0") * 60 + Long.valueOf(!ES.equals("") ? ES : "0");
-                fileRate = Double.valueOf(!FR.equals("") ? FR : "100") / 100.0;
-                initTranscode();
+
                 if (verifyPermission(MainActivity.this)) {
                     startActivity(new Intent(MainActivity.this,ProgressBarDialog.class));
                     if (!isStarted) {
@@ -76,13 +92,14 @@ public class MainActivity extends Activity {
 
     }
 
+    private void initDemuxAndMux(){
 
+        demuxAndMux = new DemuxAndMux(srcFilePath,filePath);
+        demuxAndMux.init();
+    }
     private void initTranscode(){
 
-        AssetFileDescriptor srcFilePath = getResources().openRawResourceFd(R.raw.shape_of_my_heart);
-        AssetFileDescriptor srcFilePath2 = getResources().openRawResourceFd(R.raw.shape_of_my_heart2);
-        String filePath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/shape.mp4";
-        transcodeWrapperDemo = new TranscodeWrapperDemo(filePath, srcFilePath,srcFilePath2);
+        transcodeWrapperDemo = new TranscodeWrapperDemo2(filePath, srcFilePath,srcFilePath2);
         transcodeWrapperDemo.setAssignSize(fileRate);
         transcodeWrapperDemo.init();
         transcodeWrapperDemo.setTailTime(startTime,endTime);

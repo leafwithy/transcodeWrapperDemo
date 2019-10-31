@@ -64,7 +64,7 @@ public class TranscodeWrapperDemo {
         if (rate > 100 && rate < 0) {
             throw new IllegalArgumentException("文件大小比例不合适");
         } else {
-            assignSizeRate = Double.valueOf(new DecimalFormat(".0000").format(rate / 100.0));
+            assignSizeRate = Double.valueOf(new DecimalFormat(".0000").format(rate));
         }
     }
 
@@ -216,7 +216,7 @@ public class TranscodeWrapperDemo {
         videoFormat.setInteger(MediaFormat.KEY_FRAME_RATE, frameRate);
         videoFormat.setInteger(MediaFormat.KEY_BIT_RATE,(int)(bitRate * assignSizeRate));
         videoFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible);
-        videoFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL,frameRate * 2);
+        videoFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL,frameRate);
 
         MediaFormat audioFormat = MediaFormat.createAudioFormat(audioFormatType, sampleRate, channelCount);
         audioFormat.setInteger(MediaFormat.KEY_BIT_RATE,(int)(audioBitRate * assignSizeRate));
