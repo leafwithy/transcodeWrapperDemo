@@ -9,6 +9,7 @@ import android.util.Log;
 
 import androidx.annotation.Nullable;
 
+import com.example.myapplication3.MainActivity;
 import com.example.myapplication3.ProgressBarDialog;
 
 import java.nio.ByteBuffer;
@@ -28,13 +29,15 @@ class OutputThread extends Thread{
     private String MIME;
     private MediaCodec encodec;
     private static MediaMuxer muxer;
-    private ProgressBarDialog.MyHandler handler = ProgressBarDialog.getHandler();
+    private static ProgressBarDialog.MyHandler handler;
 
     public OutputThread(@Nullable MediaMuxer muxer , @Nullable MediaCodec encodec ,@Nullable String MIME , double totalMS){
         this.muxer = muxer;
         this.encodec = encodec;
         this.MIME = MIME;
         this.totalMS = totalMS;
+        if (handler == null)
+        handler = ProgressBarDialog.getHandler();
     }
 
     public void setPauseOutput(boolean pauseOutput) {
@@ -127,9 +130,16 @@ class OutputThread extends Thread{
     }
     private static synchronized void releaseMuxer(){
         if (isMuxed == 2){
-            isMuxed++;
             muxer.stop();
             muxer.release();
+
+            MainActivity.isStarted = false;
+            isMuxed = 0;
+            videoTrackIndex = -1 ;
+            audioTrackIndex = -1 ;
+            isMuxerStarted = false;
+            muxer = null;
+            handler = null;
             Log.v("tag","released muxer");
         }
     }

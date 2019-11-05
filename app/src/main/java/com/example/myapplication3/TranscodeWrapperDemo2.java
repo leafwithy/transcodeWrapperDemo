@@ -54,9 +54,8 @@ public class TranscodeWrapperDemo2 {
     }
 
 
-    public boolean startTranscode(){
+    public void startTranscode(){
         transcode.start();
-        return true;
     }
     public  void init(){
         initMediaExtractor();
@@ -68,6 +67,7 @@ public class TranscodeWrapperDemo2 {
     ///////////private //////////////
 
     private void initTranscode(){
+
         TranscodeBuilder transcodeBuilder = new TranscodeBuilder();
         transcodeBuilder.buildAudioInputThread(audioExtractor,audioDecodec,audioEncodec,audioIndex,durationTotal);
         transcodeBuilder.buildVideoInputThread(extractor,decodec,encodec,videoIndex,durationTotal);
@@ -146,7 +146,7 @@ public class TranscodeWrapperDemo2 {
         videoFormat.setInteger(MediaFormat.KEY_FRAME_RATE, frameRate);
         videoFormat.setInteger(MediaFormat.KEY_BIT_RATE,(int)(bitRate * assignSizeRate ));
         videoFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible);
-        videoFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL,frameRate * 2);
+        videoFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL,frameRate / 2);
 
         MediaFormat audioFormat = MediaFormat.createAudioFormat(audioFormatType, sampleRate, channelCount);
         audioFormat.setInteger(MediaFormat.KEY_BIT_RATE,(int)(audioBitRate * assignSizeRate ));

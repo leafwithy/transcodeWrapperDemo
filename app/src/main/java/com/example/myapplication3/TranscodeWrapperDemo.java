@@ -25,7 +25,7 @@ public class TranscodeWrapperDemo {
     private MediaCodec decodec,encodec,audioDecodec,audioEncodec;
 
     private MediaMuxer muxer;
-    private ProgressBarDialog.MyHandler handler = ProgressBarDialog.getHandler();
+    private ProgressBarDialog.MyHandler handler = new ProgressBarDialog().getHandler();
     private String filePath = null;
     private AssetFileDescriptor srcFilePath = null;
     private AssetFileDescriptor srcFilePath2 = null;

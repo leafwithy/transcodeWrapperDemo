@@ -14,9 +14,9 @@ import androidx.annotation.Nullable;
  * Created by weizheng.huang on 2019-10-25.
  */
 public class ProgressBarDialog extends Activity {
-    private static MyHandler handler = new MyHandler();
-    private static TextView text1;
-    private static double progress;
+    private  static  MyHandler handler;
+    private  static TextView text1;
+    private  static double progress;
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -24,19 +24,11 @@ public class ProgressBarDialog extends Activity {
         setContentView(R.layout.activity_dialog);
         text1= findViewById(R.id.progress);
 
-
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        if (progress == 100){
-            finish();
-        }
-    }
 
-    public static MyHandler getHandler(){
-        if (handler != null){
+    public  static  MyHandler getHandler(){
+        if (handler == null){
             handler = new MyHandler();
         }
         return handler;
@@ -55,4 +47,6 @@ public class ProgressBarDialog extends Activity {
             text1.setText(""+progress+"%");
         }
     }
+
+
 }

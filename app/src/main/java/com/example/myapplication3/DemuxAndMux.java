@@ -1,6 +1,5 @@
 package com.example.myapplication3;
 
-import android.content.res.AssetFileDescriptor;
 import android.media.MediaCodec;
 import android.media.MediaExtractor;
 import android.media.MediaFormat;
@@ -9,14 +8,15 @@ import android.util.Log;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Set;
 
 /**
  * Created by weizheng.huang on 2019-10-31.
  */
 public class DemuxAndMux {
+    private Set<String> fileList;
     private MediaExtractor  extractor;
     private MediaMuxer muxer ;
-    private AssetFileDescriptor srcFilePath;
     private String filePath;
     private int videoIndex  = -1;
     private int audioIndex = -1;
@@ -25,18 +25,19 @@ public class DemuxAndMux {
     private boolean isMuxerStarted = false;
     private int videoInputSize;
     private int audioInputSize;
+    private boolean isMuxered = false;
 
-
-    public DemuxAndMux(AssetFileDescriptor afd , String filePath){
-        this.srcFilePath = afd;
+    public DemuxAndMux(Set<String> afd , String filePath){
+        this.fileList = afd;
         this.filePath = filePath;
     }
 
-    public void init(){
-        initMediaExtractor();
+    public void init(String srcFilePath){
+
         initMediaMuxer();
+        initMediaExtractor(srcFilePath);
     }
-    private void initMediaExtractor(){
+    private void initMediaExtractor(String srcFilePath){
         extractor = new MediaExtractor();
         try {
             extractor.setDataSource(srcFilePath);
@@ -56,15 +57,6 @@ public class DemuxAndMux {
                 audioInputSize = format.getInteger(MediaFormat.KEY_MAX_INPUT_SIZE);
             }
         }
-    }
-
-
-    private void initMediaMuxer(){
-        try {
-            muxer = new MediaMuxer(filePath,MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
         if (0 > videoTrackIndex){
             MediaFormat format = extractor.getTrackFormat(videoIndex);
             videoTrackIndex = muxer.addTrack(format);
@@ -73,23 +65,46 @@ public class DemuxAndMux {
             MediaFormat format = extractor.getTrackFormat(audioIndex);
             audioTrackIndex = muxer.addTrack(format);
         }
+    }
+
+
+    private void initMediaMuxer(){
+        try {
+            if (muxer == null)
+            muxer = new MediaMuxer(filePath,MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
 
     }
 
     private Thread thread = new Thread(new Runnable() {
         @Override
         public void run() {
-            if (!isMuxerStarted && 0 <= audioTrackIndex && 0 <= videoTrackIndex){
-                muxer.start();
-                isMuxerStarted = true;
-            }else{
-                throw new IllegalArgumentException("muxer track添加失败");
+            long timeV = 0;
+            long timeA = 0;
+            for (String srcFilePath : fileList) {
+                init(srcFilePath);
+                ///////第一次启动muxer
+                if (!isMuxerStarted) {
+                    if (0 <= audioTrackIndex && 0 <= videoTrackIndex) {
+                        muxer.start();
+                        isMuxerStarted = true;
+                    } else {
+                        throw new IllegalArgumentException("muxer track添加失败");
+                    }
+                }
+                timeV = writeIntoBuffer(videoInputSize, videoTrackIndex, videoIndex , timeV);
+                timeA = writeIntoBuffer(audioInputSize, audioTrackIndex, audioIndex , timeA);
+//                long time  = timeV < timeA ? timeV : timeA;
+//                timeA = timeV = time;
+                extractor.release();
             }
-            writeIntoBuffer(videoInputSize,videoTrackIndex,videoIndex);
-            writeIntoBuffer(audioInputSize,audioTrackIndex,audioIndex);
             muxer.stop();
+            isMuxered = false;
             muxer.release();
-            extractor.release();
+
             Log.v("tag","released muxer and extractor");
         }
     });
@@ -99,11 +114,12 @@ public class DemuxAndMux {
     }
 
 
-    private void writeIntoBuffer(int inputSize,int trackIndex , int index){
+    private long writeIntoBuffer(int inputSize,int trackIndex , int index , long time){
         MediaFormat format = extractor.getTrackFormat(index);
         String MIME = format.getString(MediaFormat.KEY_MIME);
         extractor.selectTrack(index);
         MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
+        info.presentationTimeUs = 0;
         while(true) {
             ByteBuffer inputBuffer = ByteBuffer.allocate(inputSize);
             int size = extractor.readSampleData(inputBuffer , 0 );
@@ -111,7 +127,7 @@ public class DemuxAndMux {
                 Log.v("tag","start release Muxer And Extractor");
                 break;
             }else{
-                info.presentationTimeUs = extractor.getSampleTime();
+                info.presentationTimeUs = extractor.getSampleTime() + time;
                 info.flags = extractor.getSampleFlags();
                 info.offset = 0;
                 info.size = size;
@@ -120,6 +136,7 @@ public class DemuxAndMux {
                 Log.d("tag","muxing " + MIME);
             }
         }
+        return info.presentationTimeUs;
     }
 
 

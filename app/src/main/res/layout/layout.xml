@@ -3,22 +3,6 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical">
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/btn"
-        android:text="开始转码"/>
-
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/pauseTranscodeBtn"
-        android:text="暂停转码"/>
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/mux"
-        android:text="合并视频"/>
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -31,6 +15,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:id="@+id/minuteOfStartTime"
+            android:inputType="number"
             android:hint="分"/>
         <TextView
             android:layout_width="wrap_content"
@@ -40,6 +25,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:id="@+id/secondsOfStartTime"
+            android:inputType="number"
             android:hint="秒"/>
     </LinearLayout>
     <LinearLayout
@@ -54,6 +40,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:id="@+id/minuteOfEndTime"
+            android:inputType="text"
             android:hint="分"/>
         <TextView
             android:layout_width="wrap_content"
@@ -63,25 +50,68 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:id="@+id/secondsOfEndTime"
+            android:inputType="text"
             android:hint="秒"/>
     </LinearLayout>
     <LinearLayout
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="文件大小"/>
+
         <EditText
+            android:id="@+id/FileSize"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:id="@+id/FileSize"
-            />
+            android:inputType="text" />
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="%"/>
     </LinearLayout>
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/btn"
+        android:text="开始转码"/>
 
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/pauseTranscodeBtn"
+        android:text="暂停转码"/>
+    </LinearLayout>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/videoplayer"
+            android:text="准备播放视频"/>
+        <VideoView
+            android:layout_width="wrap_content"
+            android:layout_height="300dp"
+            android:id="@+id/systemVideo"/>
+    </LinearLayout>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/mux"
+        android:text="合并视频"/>
+    <ListView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/listView"
+        />
 
 </LinearLayout>
